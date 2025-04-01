@@ -1,5 +1,5 @@
 import tkinter as tk
-from tkinter import Canvas, PhotoImage
+from tkinter import Canvas, PhotoImage, Frame, Label
 import threading
 import time
 import random
@@ -11,9 +11,10 @@ class Estado(Enum):
     COMIENDO = 2
 
 class Filosofo(threading.Thread):
-    def __init__(self, id, app, tiempo_pensando=(1, 3), tiempo_comiendo=(1, 3)):
+    def __init__(self, id, nombre, app, tiempo_pensando=5, tiempo_comiendo=5):
         threading.Thread.__init__(self)
         self.id = id
+        self.nombre = nombre
         self.app = app
         self.estado = Estado.PENSANDO
         self.tiempo_pensando = tiempo_pensando
@@ -30,8 +31,7 @@ class Filosofo(threading.Thread):
     def pensar(self):
         self.estado = Estado.PENSANDO
         self.app.actualizar_estado(self.id, self.estado)
-        tiempo = random.uniform(*self.tiempo_pensando)
-        time.sleep(tiempo)
+        time.sleep(self.tiempo_pensando)
         
     def tomar_palillos(self):
         self.estado = Estado.HAMBRIENTO
@@ -50,14 +50,13 @@ class Filosofo(threading.Thread):
             self.app.semaforo.release()
         else:
             self.app.semaforo.release()
-            time.sleep(0.1)  # Espera un poco antes de intentar de nuevo
+            time.sleep(0.5)  # Espera un poco antes de intentar de nuevo
             self.tomar_palillos()  # Intenta de nuevo
             
     def comer(self):
         self.estado = Estado.COMIENDO
         self.app.actualizar_estado(self.id, self.estado)
-        tiempo = random.uniform(*self.tiempo_comiendo)
-        time.sleep(tiempo)
+        time.sleep(self.tiempo_comiendo)
         
     def dejar_palillos(self):
         self.app.semaforo.acquire()
@@ -72,7 +71,16 @@ class App:
     def __init__(self, root):
         self.root = root
         self.root.title("Problema de los 5 Filósofos con Palillos Chinos")
-        self.root.geometry("800x600")
+        self.root.geometry("1000x600")
+        
+        # Nombres de los filósofos
+        self.nombres_filosofos = [
+            "Sócrates", 
+            "Platón", 
+            "Aristóteles", 
+            "Confucio", 
+            "Lao Tse"
+        ]
         
         # Semáforo para control de acceso a los palillos
         self.semaforo = threading.Semaphore(1)
@@ -80,12 +88,42 @@ class App:
         # Estado de los palillos (True = en uso, False = disponible)
         self.palillos_en_uso = [False] * 5
         
+        # Crear panel de información en el lado izquierdo
+        self.panel_info = Frame(root, width=200, bg="#e0e0e0", padx=10, pady=10)
+        self.panel_info.pack(side="left", fill="y")
+        
+        # Título del panel
+        titulo = Label(self.panel_info, text="ESTADO DE FILÓSOFOS", font=("Arial", 12, "bold"), bg="#e0e0e0")
+        titulo.pack(pady=(0, 10))
+        
+        # Frame para cada filósofo en el panel
+        self.frames_info_filosofos = []
+        self.labels_nombre_filosofos = []
+        self.labels_estado_filosofos = []
+        
+        for i in range(5):
+            frame = Frame(self.panel_info, bg="#d0d0d0", padx=5, pady=5, borderwidth=1, relief="solid")
+            frame.pack(fill="x", pady=5)
+            
+            lbl_nombre = Label(frame, text=self.nombres_filosofos[i], font=("Arial", 10, "bold"), bg="#d0d0d0")
+            lbl_nombre.pack(pady=(0, 5))
+            
+            lbl_estado = Label(frame, text="Pensando", font=("Arial", 9), bg="#d0d0d0", fg="blue")
+            lbl_estado.pack()
+            
+            self.frames_info_filosofos.append(frame)
+            self.labels_nombre_filosofos.append(lbl_nombre)
+            self.labels_estado_filosofos.append(lbl_estado)
+        
+        # Frame para la visualización gráfica
+        self.frame_visual = Frame(root)
+        self.frame_visual.pack(side="right", fill="both", expand=True)
+        
         # Canvas principal
-        self.canvas = Canvas(root, width=800, height=600, bg="#f0f0f0")
+        self.canvas = Canvas(self.frame_visual, width=800, height=600, bg="#f0f0f0")
         self.canvas.pack(fill="both", expand=True)
         
         # Cargar imágenes (debes tener estas imágenes en el mismo directorio)
-        # Aquí debes proporcionar tus propias imágenes
         self.img_mesa = self.cargar_imagen("mesa.png", 400, 400)
         self.img_filosofo = [
             self.cargar_imagen("filosofo1.png", 80, 80),
@@ -94,7 +132,11 @@ class App:
             self.cargar_imagen("filosofo4.png", 80, 80),
             self.cargar_imagen("filosofo5.png", 80, 80)
         ]
-        self.img_palillo = self.cargar_imagen("palillo.png", 40, 10)
+        # Palillos más grandes (reducimos el factor de escala)
+        self.img_palillo = self.cargar_imagen("palillo.png", 60, 15)
+        
+        # Fondos de colores para los filósofos
+        self.filosofos_fondos = []
         
         # Posiciones de los filósofos (centro x, centro y)
         self.pos_filosofos = [
@@ -119,15 +161,15 @@ class App:
         self.dibujar_filosofos()
         self.dibujar_palillos()
         
-        # Etiquetas de estado para cada filósofo
+        # Etiquetas de estado para cada filósofo en el canvas
         self.etiquetas_estado = []
         for i in range(5):
             x, y = self.pos_filosofos[i]
-            etiqueta = self.canvas.create_text(x, y + 60, text="Pensando", fill="black", font=("Arial", 10))
+            etiqueta = self.canvas.create_text(x, y + 60, text=self.nombres_filosofos[i], fill="black", font=("Arial", 10, "bold"))
             self.etiquetas_estado.append(etiqueta)
         
         # Crear los filósofos
-        self.filosofos = [Filosofo(i, self) for i in range(5)]
+        self.filosofos = [Filosofo(i, self.nombres_filosofos[i], self) for i in range(5)]
         
         # Iniciar los hilos de los filósofos
         for filosofo in self.filosofos:
@@ -150,10 +192,16 @@ class App:
             self.canvas.create_oval(250, 200, 550, 400, fill="#8B4513")
     
     def dibujar_filosofos(self):
-        # Dibujar los filósofos alrededor de la mesa
+        # Dibujar los filósofos alrededor de la mesa con fondos de colores
         self.filosofos_img_ids = []
+        
         for i in range(5):
             x, y = self.pos_filosofos[i]
+            
+            # Crear un fondo circular para cada filósofo
+            fondo = self.canvas.create_oval(x-40, y-40, x+40, y+40, fill="#d0d0d0", outline="")
+            self.filosofos_fondos.append(fondo)
+            
             if self.img_filosofo[i]:
                 img_id = self.canvas.create_image(x, y, image=self.img_filosofo[i])
             else:
@@ -169,10 +217,10 @@ class App:
             if self.img_palillo:
                 img_id = self.canvas.create_image(x, y, image=self.img_palillo)
             else:
-                # Dibujar una línea simple si no hay imagen
-                x1, y1 = x-20, y
-                x2, y2 = x+20, y
-                img_id = self.canvas.create_line(x1, y1, x2, y2, width=3, fill="brown")
+                # Dibujar una línea simple más grande si no hay imagen
+                x1, y1 = x-30, y
+                x2, y2 = x+30, y
+                img_id = self.canvas.create_line(x1, y1, x2, y2, width=5, fill="brown")
             self.palillos_img_ids.append(img_id)
     
     def actualizar_estado(self, id_filosofo, estado):
@@ -186,8 +234,30 @@ class App:
             Estado.HAMBRIENTO: "orange",
             Estado.COMIENDO: "green"
         }
-        # Actualizar la etiqueta de estado del filósofo
-        self.canvas.itemconfig(self.etiquetas_estado[id_filosofo], text=estados[estado], fill=colores[estado])
+        
+        # Colores de fondo para los filósofos en el canvas
+        bg_colores = {
+            Estado.PENSANDO: "#d0d0d0",  # Gris claro
+            Estado.HAMBRIENTO: "#ffe0b0", # Naranja claro
+            Estado.COMIENDO: "#c0ffc0"   # Verde claro
+        }
+        
+        # Actualizar el fondo del filósofo en el canvas
+        self.canvas.itemconfig(self.filosofos_fondos[id_filosofo], fill=bg_colores[estado])
+        
+        # Actualizar la etiqueta de estado del filósofo en el canvas
+        self.canvas.itemconfig(self.etiquetas_estado[id_filosofo], text=f"{self.nombres_filosofos[id_filosofo]}\n{estados[estado]}")
+        
+        # Actualizar el label en el panel de información
+        self.labels_estado_filosofos[id_filosofo].config(text=estados[estado], fg=colores[estado])
+        
+        # Cambiar el color de fondo del frame según el estado
+        self.frames_info_filosofos[id_filosofo].config(bg=bg_colores[estado])
+        self.labels_nombre_filosofos[id_filosofo].config(bg=bg_colores[estado])
+        self.labels_estado_filosofos[id_filosofo].config(bg=bg_colores[estado])
+        
+        # Forzar actualización de la interfaz
+        self.root.update()
         
     def actualizar_palillos(self, izquierdo, derecho, en_uso):
         color = "red" if en_uso else "brown"
