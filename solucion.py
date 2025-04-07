@@ -7,8 +7,7 @@ from enum import Enum
 
 class Estado(Enum):
     PENSANDO = 0
-    HAMBRIENTO = 1
-    COMIENDO = 2
+    COMIENDO = 1
 
 class Filosofo(threading.Thread):
     def __init__(self, id, nombre, app, tiempo_pensando=5, tiempo_comiendo=5):
@@ -34,8 +33,7 @@ class Filosofo(threading.Thread):
         time.sleep(self.tiempo_pensando)
         
     def tomar_palillos(self):
-        self.estado = Estado.HAMBRIENTO
-        self.app.actualizar_estado(self.id, self.estado)
+        # Ya no cambiamos a estado hambriento
         self.app.semaforo.acquire()
         # Intenta tomar ambos palillos
         izquierdo = self.id
@@ -67,10 +65,11 @@ class Filosofo(threading.Thread):
         self.app.actualizar_palillos(izquierdo, derecho, False)
         self.app.semaforo.release()
 
+# Este es el código de la interfaz gráfica
 class App:
     def __init__(self, root):
         self.root = root
-        self.root.title("Problema de los 5 Filósofos con Palillos Chinos")
+        self.root.title("5 Filósofos")
         self.root.geometry("1000x600")
         
         # Nombres de los filósofos
@@ -88,7 +87,7 @@ class App:
         # Estado de los palillos (True = en uso, False = disponible)
         self.palillos_en_uso = [False] * 5
         
-        # Crear panel de información en el lado izquierdo
+        # Información en el lado izquierdo
         self.panel_info = Frame(root, width=200, bg="#e0e0e0", padx=10, pady=10)
         self.panel_info.pack(side="left", fill="y")
         
@@ -123,7 +122,7 @@ class App:
         self.canvas = Canvas(self.frame_visual, width=800, height=600, bg="#f0f0f0")
         self.canvas.pack(fill="both", expand=True)
         
-        # Cargar imágenes (debes tener estas imágenes en el mismo directorio)
+        # Cargar imágenes
         self.img_mesa = self.cargar_imagen("mesa.png", 400, 400)
         self.img_filosofo = [
             self.cargar_imagen("filosofo1.png", 80, 80),
@@ -132,7 +131,7 @@ class App:
             self.cargar_imagen("filosofo4.png", 80, 80),
             self.cargar_imagen("filosofo5.png", 80, 80)
         ]
-        # Palillos más grandes (reducimos el factor de escala)
+        # Palillos
         self.img_palillo = self.cargar_imagen("palillo.png", 60, 15)
         
         # Fondos de colores para los filósofos
@@ -180,7 +179,7 @@ class App:
             imagen = PhotoImage(file=filename)
             return imagen.subsample(int(imagen.width() / width), int(imagen.height() / height))
         except:
-            # Si no se encuentra la imagen, crea un rectángulo de placeholder
+            
             return None
     
     def dibujar_mesa(self):
@@ -188,7 +187,7 @@ class App:
         if self.img_mesa:
             self.canvas.create_image(400, 300, image=self.img_mesa)
         else:
-            # Dibujar una mesa circular simple si no hay imagen
+            
             self.canvas.create_oval(250, 200, 550, 400, fill="#8B4513")
     
     def dibujar_filosofos(self):
@@ -205,7 +204,7 @@ class App:
             if self.img_filosofo[i]:
                 img_id = self.canvas.create_image(x, y, image=self.img_filosofo[i])
             else:
-                # Dibujar un círculo simple si no hay imagen
+                
                 img_id = self.canvas.create_oval(x-30, y-30, x+30, y+30, fill="#FFD700")
             self.filosofos_img_ids.append(img_id)
     
@@ -217,7 +216,7 @@ class App:
             if self.img_palillo:
                 img_id = self.canvas.create_image(x, y, image=self.img_palillo)
             else:
-                # Dibujar una línea simple más grande si no hay imagen
+                
                 x1, y1 = x-30, y
                 x2, y2 = x+30, y
                 img_id = self.canvas.create_line(x1, y1, x2, y2, width=5, fill="brown")
@@ -226,20 +225,17 @@ class App:
     def actualizar_estado(self, id_filosofo, estado):
         estados = {
             Estado.PENSANDO: "Pensando",
-            Estado.HAMBRIENTO: "Hambriento",
             Estado.COMIENDO: "Comiendo"
         }
         colores = {
             Estado.PENSANDO: "blue",
-            Estado.HAMBRIENTO: "orange",
             Estado.COMIENDO: "green"
         }
         
         # Colores de fondo para los filósofos en el canvas
         bg_colores = {
-            Estado.PENSANDO: "#d0d0d0",  # Gris claro
-            Estado.HAMBRIENTO: "#ffe0b0", # Naranja claro
-            Estado.COMIENDO: "#c0ffc0"   # Verde claro
+            Estado.PENSANDO: "#d0d0d0",  
+            Estado.COMIENDO: "#c0ffc0"   
         }
         
         # Actualizar el fondo del filósofo en el canvas
@@ -261,8 +257,7 @@ class App:
         
     def actualizar_palillos(self, izquierdo, derecho, en_uso):
         color = "red" if en_uso else "brown"
-        # Si estamos usando imágenes, podríamos cambiar la opacidad o el tinte
-        # Pero para la implementación simple, solo cambiamos el color si no hay imagen
+       
         if not self.img_palillo:
             self.canvas.itemconfig(self.palillos_img_ids[izquierdo], fill=color)
             self.canvas.itemconfig(self.palillos_img_ids[derecho], fill=color)
