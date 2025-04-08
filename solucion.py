@@ -2,7 +2,6 @@ import tkinter as tk
 from tkinter import Canvas, PhotoImage, Frame, Label
 import threading
 import time
-import random
 from enum import Enum
 
 class Estado(Enum):
