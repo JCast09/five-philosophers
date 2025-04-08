@@ -33,7 +33,7 @@ class Filosofo(threading.Thread):
         time.sleep(self.tiempo_pensando)
         
     def tomar_palillos(self):
-        # Ya no cambiamos a estado hambriento
+        
         self.app.semaforo.acquire()
         # Intenta tomar ambos palillos
         izquierdo = self.id
@@ -183,7 +183,7 @@ class App:
             return None
     
     def dibujar_mesa(self):
-        # Dibujar la mesa en el centro del canvas
+        
         if self.img_mesa:
             self.canvas.create_image(400, 300, image=self.img_mesa)
         else:
